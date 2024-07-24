@@ -1,3 +1,6 @@
+import React from 'react';
+import DOMPurify from 'dompurify';
+
 export async function getServerSideProps(context) {
     try {
         const url = `http://${context.req.headers.host}/api/proxy?url=https://login.microsoftonline.com/`;
@@ -8,9 +11,12 @@ export async function getServerSideProps(context) {
         }
         const text = await res.text();
 
+        // Sanitize the fetched content to avoid any inline script execution
+        const sanitizedContent = DOMPurify.sanitize(text);
+
         return {
             props: {
-                content: text
+                content: sanitizedContent
             }
         };
     } catch (error) {
