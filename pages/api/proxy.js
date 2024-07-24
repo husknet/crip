@@ -48,15 +48,14 @@ export default async (req, res) => {
     }
 
     try {
-        let url = new URL(req.query.url);
+        const url = new URL(req.query.url);
         url.host = upstream;
         url.protocol = https ? 'https:' : 'http:';
         url.pathname = url.pathname === '/' ? upstream_path : upstream_path + url.pathname;
 
         const fetchOptions = {
             method,
-            headers: { ...req.headers, Host: upstream, Referer: `${url.protocol}//${req.headers.host}` },
-            body: req.body
+            headers: { ...req.headers, Host: upstream, Referer: `${url.protocol}//${req.headers.host}` }
         };
 
         const original_response = await fetch(url.href, fetchOptions);
